@@ -1,9 +1,9 @@
 package com.example.digitalfocus.service
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Context 
-import android.graphics.PixelFormat
 import android.view.accessibility.AccessibilityNodeInfo
+import android.content.Context
+import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -80,15 +80,11 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun isBlockedUrlInBrowser(rootNode: AccessibilityNodeInfo?): Boolean {
         if (rootNode == null) return false
 
-        // This is the most fragile part of the implementation.
-        // The View ID "url_bar" is specific to Chrome and could be different in past or future versions.
         val urlBarNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.chrome:id/url_bar")
         if (urlBarNodes.isNotEmpty() && urlBarNodes[0].text != null) {
             val url = urlBarNodes[0].text.toString()
-            Log.d(TAG, "Chrome URL found via ID: $url")
             return blockedBrowserUrls.any { url.contains(it, ignoreCase = true) }
         } else {
-            // If the ID lookup fails, log a warning. This helps debug issues on older devices.
             Log.w(TAG, "Could not find Chrome URL bar by ID. Browser blocking may not work on this device/Chrome version.")
         }
         return false
@@ -121,22 +117,22 @@ class FocusAccessibilityService : AccessibilityService() {
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
-            setContent { BlockingView() }
+            setContent { 
+                BlockingView(onExitClick = { hideOverlay() }) 
+            }
         }
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            0, // Makes the overlay interactive
             PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.CENTER
 
         windowManager.addView(overlayView, params)
         owner.resume()
-
-        Handler(Looper.getMainLooper()).postDelayed({ hideOverlay() }, 5000)
     }
 
     private fun hideOverlay() {
