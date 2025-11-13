@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Digital Focus</string>
+    <string name="accessibility_service_label">Digital Focus Accessibility Service</string>
+</resources>
