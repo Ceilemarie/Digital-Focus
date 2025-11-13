@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeViewScrolled"
-    android:packageNames="com.google.android.youtube"
+    android:packageNames="com.google.android.youtube,com.android.chrome,com.instagram.android,com.facebook.katana,com.zhiliaoapp.musically,com.ss.android.ugc.trill"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100" />

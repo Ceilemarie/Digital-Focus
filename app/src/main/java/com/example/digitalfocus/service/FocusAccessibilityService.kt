@@ -1,8 +1,9 @@
 package com.example.digitalfocus.service
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Context
+import android.content.Context 
 import android.graphics.PixelFormat
+import android.view.accessibility.AccessibilityNodeInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -26,9 +27,23 @@ class FocusAccessibilityService : AccessibilityService() {
     private var overlayView: ComposeView? = null
     private var lifecycleOwner: WindowLifecycleOwner? = null
 
-    // Debouncing logic to prevent counting a single user scroll multiple times
     private val scrollHandler = Handler(Looper.getMainLooper())
     private var isDebouncing = false
+
+    private val blockedAppPackages = setOf(
+        "com.google.android.youtube",
+        "com.instagram.android",
+        "com.facebook.katana",
+        "com.zhiliaoapp.musically", // TikTok
+        "com.ss.android.ugc.trill"   // TikTok
+    )
+
+    private val blockedBrowserUrls = setOf(
+        "youtube.com",
+        "tiktok.com",
+        "facebook.com",
+        "instagram.com"
+    )
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -36,39 +51,59 @@ class FocusAccessibilityService : AccessibilityService() {
             dataRepository = DataRepository(this)
         }
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-        // Failsafe: Ensure the service always starts in a non-blocked state.
         dataRepository?.setBlocked(false)
-
         Log.d(TAG, "onServiceConnected - The service is running.")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.scrollDeltaY == 0) {
-            return
-        }
-
-        // If we are currently in the debounce period, ignore this event.
-        if (isDebouncing) {
+        if (event == null || event.scrollDeltaY == 0 || isDebouncing) {
             return
         }
 
         val repo = dataRepository ?: return
-
         if (repo.isBlocked()) {
             return
         }
 
-        // Start debouncing to group rapid-fire scroll events into one.
+        val packageName = event.packageName?.toString() ?: ""
+        val isEventFromBlockedApp = when {
+            packageName in blockedAppPackages -> true
+            packageName == "com.android.chrome" -> isBlockedUrlInBrowser(rootInActiveWindow)
+            else -> false
+        }
+
+        if (isEventFromBlockedApp) {
+            handleBlockedAppScroll(repo)
+        }
+    }
+
+    private fun isBlockedUrlInBrowser(rootNode: AccessibilityNodeInfo?): Boolean {
+        if (rootNode == null) return false
+
+        // This is the most fragile part of the implementation.
+        // The View ID "url_bar" is specific to Chrome and could be different in past or future versions.
+        val urlBarNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.chrome:id/url_bar")
+        if (urlBarNodes.isNotEmpty() && urlBarNodes[0].text != null) {
+            val url = urlBarNodes[0].text.toString()
+            Log.d(TAG, "Chrome URL found via ID: $url")
+            return blockedBrowserUrls.any { url.contains(it, ignoreCase = true) }
+        } else {
+            // If the ID lookup fails, log a warning. This helps debug issues on older devices.
+            Log.w(TAG, "Could not find Chrome URL bar by ID. Browser blocking may not work on this device/Chrome version.")
+        }
+        return false
+    }
+
+    private fun handleBlockedAppScroll(repo: DataRepository) {
         isDebouncing = true
-        scrollHandler.postDelayed({ isDebouncing = false }, 300) // 300ms debounce window
+        scrollHandler.postDelayed({ isDebouncing = false }, 300)
 
         val currentCount = repo.getScrollCount()
         val newCount = currentCount + 1
         repo.setScrollCount(newCount)
         scrollCountForTest++
 
-        Log.d(TAG, "Scroll detected on YouTube. New count: $newCount")
+        Log.d(TAG, "Scroll detected on a blocked app. New count: $newCount")
 
         if (newCount >= 5) {
             repo.setScrollCount(0)
@@ -78,19 +113,15 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun showOverlay() {
-        // Create and manage a custom lifecycle for the overlay
         val owner = WindowLifecycleOwner()
         lifecycleOwner = owner
-
         dataRepository?.setBlocked(true)
+
         overlayView = ComposeView(this).apply {
-            // Attach the custom lifecycle owner
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
-            setContent {
-                BlockingView()
-            }
+            setContent { BlockingView() }
         }
 
         val params = WindowManager.LayoutParams(
@@ -105,9 +136,7 @@ class FocusAccessibilityService : AccessibilityService() {
         windowManager.addView(overlayView, params)
         owner.resume()
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            hideOverlay()
-        }, 5000)
+        Handler(Looper.getMainLooper()).postDelayed({ hideOverlay() }, 5000)
     }
 
     private fun hideOverlay() {
@@ -115,8 +144,6 @@ class FocusAccessibilityService : AccessibilityService() {
             windowManager.removeView(it)
             overlayView = null
             dataRepository?.setBlocked(false)
-
-            // Destroy the custom lifecycle owner
             lifecycleOwner?.destroy()
             lifecycleOwner = null
         }
