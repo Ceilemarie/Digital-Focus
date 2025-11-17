@@ -43,7 +43,9 @@ fun AppNavigation() {
         composable("child_character_selection") { CharacterSelectionScreen(navController = navController) }
         composable("growth_level") { GrowthLevelScreen(navController = navController) }
         composable("child_home_dashboard") { ChildHomeDashboard(navController = navController) }
-        composable("child_garden") { MyGardenScreen(navController = navController) }
+
+
+
 
         // Parent Flow
         composable("parent_home_dashboard") { ParentHomeDashboard(navController = navController) }
