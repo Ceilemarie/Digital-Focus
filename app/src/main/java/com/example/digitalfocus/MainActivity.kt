@@ -34,6 +34,7 @@ fun AppNavigation() {
         // Onboarding
         composable("splash") { SplashScreen(navController = navController) }
         composable("welcome") { WelcomeScreen(navController = navController) }
+
         composable("login/{userType}") { backStackEntry ->
             val userType = backStackEntry.arguments?.getString("userType") ?: ""
             LoginScreen(navController = navController, userType = userType)

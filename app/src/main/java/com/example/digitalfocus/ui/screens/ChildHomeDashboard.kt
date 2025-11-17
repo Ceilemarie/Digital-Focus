@@ -12,7 +12,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Inventory
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -239,7 +239,7 @@ fun CustomBottomNavBar(navController: NavController) {
             Icon(Icons.Default.GroupAdd, contentDescription = "Friends", modifier = Modifier.size(30.dp), tint = DarkText)
         }
         IconButton(onClick = { /* TODO: Navigate */ }) {
-            Icon(Icons.Outlined.Inventory2, contentDescription = "Tasks", modifier = Modifier.size(30.dp), tint = DarkText)
+            Icon(Icons.Outlined.Inventory, contentDescription = "Tasks", modifier = Modifier.size(30.dp), tint = DarkText)
         }
         IconButton(onClick = { /* TODO: Navigate */ }) {
             Icon(Icons.Default.Settings, contentDescription = "Settings", modifier = Modifier.size(30.dp), tint = DarkText)
